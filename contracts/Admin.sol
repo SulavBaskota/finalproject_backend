@@ -32,4 +32,8 @@ contract Admin {
     function isAdmin(address adminAddress) public view returns (bool) {
         return adminAddressMap[adminAddress];
     }
+
+    function isSuperAdmin() public view returns (bool) {
+        return superAdminAddress == msg.sender;
+    }
 }
