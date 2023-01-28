@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity 0.8.17;
 
 import "./Admin.sol";
 
@@ -41,8 +41,8 @@ error NotAdmin();
  *
  *
  * Need to handle unsuccessful auction, which should allow bidders to withdraw their deposits
- * 
- * 
+ *
+ *
  * How to manage search? How to keep track of auctions for both sellers and buyer? Maybe create a watch-list,
  * have a section to show successful winning bids for bidder, and my-auctions for sellers
  */
@@ -61,7 +61,6 @@ contract BlindAuction {
     } // 0, 1, 2, 3
 
     address payable public seller;
-    uint256 public auctionId;
     uint256 public biddingTime;
     uint256 public revealTime;
     uint256 public biddingEnd;
@@ -126,13 +125,11 @@ contract BlindAuction {
     }
 
     constructor(
-        uint256 _auctionId,
         uint256 _biddingTime,
         uint256 _revealTime,
         address _adminContractAddress,
         address payable sellerAddress
     ) {
-        auctionId = _auctionId;
         seller = sellerAddress;
         biddingTime = _biddingTime;
         revealTime = _revealTime;
@@ -146,19 +143,35 @@ contract BlindAuction {
         revealEnd = biddingEnd + revealTime;
     }
 
-    function rejectAuction(string memory _rejectMessage) external onlyAdmin pendingVerification {
+    event AuctionRejected(
+        address auctionAddress,
+        string reason,
+        address adminAddress
+    );
+
+    function rejectAuction(
+        string memory _rejectMessage
+    ) external onlyAdmin pendingVerification {
         auctionState = AuctionState.REJECTED;
         rejectMessage = _rejectMessage;
+        emit AuctionRejected(address(this), rejectMessage, msg.sender);
     }
 
     /*
-     * During Implementation, the parameters need to be changed 
+     * During Implementation, the parameters need to be changed
      */
     function bid(
         uint256 value,
         uint256 trueBid,
         string memory secret
-    ) external payable verifiedAuction onlyBefore(biddingEnd) notSeller noPreviousBid {
+    )
+        external
+        payable
+        verifiedAuction
+        onlyBefore(biddingEnd)
+        notSeller
+        noPreviousBid
+    {
         bids[msg.sender] = Bid({
             // This needs to be done outside the contract during implementation
             blindedBid: keccak256(abi.encodePacked(value, trueBid, secret)),
@@ -174,7 +187,10 @@ contract BlindAuction {
     ) external verifiedAuction onlyAfter(biddingEnd) onlyBefore(revealEnd) {
         uint256 refund;
         Bid storage bidToCheck = bids[msg.sender];
-        if (bidToCheck.blindedBid != keccak256(abi.encodePacked(value, trueBid, secret))) {
+        if (
+            bidToCheck.blindedBid !=
+            keccak256(abi.encodePacked(value, trueBid, secret))
+        ) {
             revert InvalidReveal();
         }
         refund = bidToCheck.deposit;
@@ -200,7 +216,10 @@ contract BlindAuction {
         seller.transfer(highestBid);
     }
 
-    function placeBid(address bidder, uint256 value) internal returns (bool success) {
+    function placeBid(
+        address bidder,
+        uint256 value
+    ) internal returns (bool success) {
         // need to resolve for same bid conflict later
         if (value <= highestBid) {
             return false;

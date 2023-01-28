@@ -1,5 +1,7 @@
 const frontEndAdminAbiFile = "../frontend/constants/Admin/abi.json";
 const frontEndAdminAddressFile = "../frontend/constants/Admin/address.json";
+const frontEndBlindAuctionAbiFile =
+  "../frontend/constants/BlindAuction/abi.json";
 const frontEndBlindAuctionFactoryAbiFile =
   "../frontend/constants/BlindAuctionFactory/abi.json";
 const frontEndBlindAuctionFactoryAddressFile =
@@ -8,6 +10,7 @@ const frontEndBlindAuctionFactoryAddressFile =
 module.exports = {
   frontEndAdminAbiFile,
   frontEndAdminAddressFile,
+  frontEndBlindAuctionAbiFile,
   frontEndBlindAuctionFactoryAbiFile,
   frontEndBlindAuctionFactoryAddressFile,
 };

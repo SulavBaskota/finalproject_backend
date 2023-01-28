@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity 0.8.17;
 
 import "./BlindAuction.sol";
-
-error InvalidAuctionId();
 
 /*
  * May need to adjust code to connect to a contract to store auction item details,
@@ -24,27 +22,35 @@ error InvalidAuctionId();
 
 contract BlindAuctionFactory {
     address public immutable adminContractAddress;
-    mapping(uint256 => address) public auctionIdToAddress;
+    address[] private blindAuctionAddressArray;
+
+    event ContractCreated(address NewAuctionAddress);
 
     constructor(address _adminContractAddress) {
         adminContractAddress = _adminContractAddress;
     }
 
     function createBlindAuctionContract(
-        uint256 auctionId,
         uint256 biddingTime,
         uint256 revealTime
-    ) external returns (address) {
-        if (auctionIdToAddress[auctionId] != address(0))
-            revert InvalidAuctionId();
+    ) external {
         BlindAuction blindAuction = new BlindAuction(
-            auctionId,
             biddingTime,
             revealTime,
             adminContractAddress,
             payable(msg.sender)
         );
-        auctionIdToAddress[auctionId] = address(blindAuction);
-        return address(blindAuction);
+        blindAuctionAddressArray.push(address(blindAuction));
+        emit ContractCreated(address(blindAuction));
     }
+
+    function getBlindAuctionAddresses()
+        external
+        view
+        returns (address[] memory)
+    {
+        return blindAuctionAddressArray;
+    }
+
+    fallback() external {}
 }
