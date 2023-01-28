@@ -3,16 +3,19 @@ pragma solidity 0.8.17;
 
 import "./Admin.sol";
 
-error TooEarly(uint256 time);
-error TooLate(uint256 time);
+/**Errors */
+error NotAdmin();
+error InvalidBid();
 error InvalidReveal();
 error SellerCannotBid();
 error OnlyOneBidAllowed();
 error AuctionNotVerified();
-error AuctionAlreadyVerified();
+error TooLate(uint256 time);
+error TooEarly(uint256 time);
+error InvalidAuctionPeriod();
 error AuctionAlreadyClosed();
+error AuctionAlreadyVerified();
 error AuctionAlreadyRejected();
-error NotAdmin();
 
 /*
  * Might need to store username/userId for bidders and sellers for identification
@@ -37,8 +40,6 @@ error NotAdmin();
  * by using a loop to add the unrevealed bids to the pendingReturns mapping
  *
  *
- * Need to allow seller to specify MINIMUM_BID
- *
  *
  * Need to handle unsuccessful auction, which should allow bidders to withdraw their deposits
  *
@@ -48,36 +49,50 @@ error NotAdmin();
  */
 
 contract BlindAuction {
+    /**Type Declarations */
     struct Bid {
         bytes32 blindedBid;
         uint256 deposit;
     }
 
     enum AuctionState {
+        UNVERIFIED,
+        REJECTED,
         OPEN,
-        CLOSED,
-        PENDING,
-        REJECTED
-    } // 0, 1, 2, 3
+        SUCCESSFUL,
+        FAILED
+    } // 0, 1, 2, 3, 4
 
-    address payable public seller;
-    uint256 public biddingTime;
-    uint256 public revealTime;
-    uint256 public biddingEnd;
-    uint256 public revealEnd;
-    address public adminContractAddress;
-    string public rejectMessage;
-    AuctionState public auctionState;
+    /**State Variables */
+    string private rejectMessage;
+    uint256 private immutable endTime;
+    uint256 private immutable startTime;
+    uint256 private immutable mimimumBid;
+    uint256 private immutable revealTime;
+    address payable private immutable seller;
+    address private immutable adminContractAddress;
+    address[] private bidders;
 
-    mapping(address => Bid) public bids;
+    uint256 private constant REVEAL_PERIOD = 240; // 4 minutes
+    uint256 private constant MINIMUM_VERIFICATION_DURATION = 120; // 2 minutes
+    uint256 private constant MINIMUM_AUCTION_DURATION = 240; // 4 minutes
+
+    AuctionState private auctionState;
+
+    mapping(address => Bid) private bids;
 
     address public highestBidder;
     uint256 public highestBid;
 
-    mapping(address => uint256) pendingReturns;
+    mapping(address => uint256) private pendingReturns;
 
-    event AuctionEnded(address winner, uint256 highestBid);
+    /**Events */
+    event AuctionFailed();
+    event AuctionVerified(address verifiedBy);
+    event AuctionRejected(string reason, address rejectedBy);
+    event AuctionSuccessful(address winner, uint256 highestBid);
 
+    /**Modifiers */
     modifier onlyAdmin() {
         Admin adminContract = Admin(adminContractAddress);
         if (!adminContract.isAdmin(msg.sender)) revert NotAdmin();
@@ -85,7 +100,7 @@ contract BlindAuction {
     }
 
     modifier verifiedAuction() {
-        if (auctionState == AuctionState.PENDING) {
+        if (auctionState == AuctionState.UNVERIFIED) {
             revert AuctionNotVerified();
         } else if (auctionState == AuctionState.REJECTED) {
             revert AuctionAlreadyRejected();
@@ -116,7 +131,10 @@ contract BlindAuction {
     modifier pendingVerification() {
         if (auctionState == AuctionState.OPEN) {
             revert AuctionAlreadyVerified();
-        } else if (auctionState == AuctionState.CLOSED) {
+        } else if (
+            auctionState == AuctionState.SUCCESSFUL ||
+            auctionState == AuctionState.FAILED
+        ) {
             revert AuctionAlreadyClosed();
         } else if (auctionState == AuctionState.REJECTED) {
             revert AuctionAlreadyRejected();
@@ -124,37 +142,38 @@ contract BlindAuction {
         _;
     }
 
+    /**Constructor */
     constructor(
-        uint256 _biddingTime,
-        uint256 _revealTime,
+        uint256 _startTime,
+        uint256 _endTime,
+        uint256 _minimumBid,
         address _adminContractAddress,
         address payable sellerAddress
     ) {
+        if (
+            _startTime <= block.timestamp + MINIMUM_VERIFICATION_DURATION ||
+            _endTime < _startTime + MINIMUM_AUCTION_DURATION
+        ) revert InvalidAuctionPeriod();
         seller = sellerAddress;
-        biddingTime = _biddingTime;
-        revealTime = _revealTime;
-        auctionState = AuctionState.PENDING;
+        startTime = _startTime;
+        endTime = _endTime;
+        revealTime = _endTime + REVEAL_PERIOD;
+        auctionState = AuctionState.UNVERIFIED;
+        mimimumBid = _minimumBid;
         adminContractAddress = _adminContractAddress;
     }
 
-    function verify() external onlyAdmin pendingVerification {
+    function verifyAuction() external onlyAdmin pendingVerification {
         auctionState = AuctionState.OPEN;
-        biddingEnd = block.timestamp + biddingTime;
-        revealEnd = biddingEnd + revealTime;
+        emit AuctionVerified(msg.sender);
     }
-
-    event AuctionRejected(
-        address auctionAddress,
-        string reason,
-        address adminAddress
-    );
 
     function rejectAuction(
         string memory _rejectMessage
     ) external onlyAdmin pendingVerification {
         auctionState = AuctionState.REJECTED;
         rejectMessage = _rejectMessage;
-        emit AuctionRejected(address(this), rejectMessage, msg.sender);
+        emit AuctionRejected(_rejectMessage, msg.sender);
     }
 
     /*
@@ -168,15 +187,18 @@ contract BlindAuction {
         external
         payable
         verifiedAuction
-        onlyBefore(biddingEnd)
+        onlyAfter(startTime)
+        onlyBefore(endTime)
         notSeller
         noPreviousBid
     {
+        if (msg.value < mimimumBid) revert InvalidBid();
         bids[msg.sender] = Bid({
             // This needs to be done outside the contract during implementation
             blindedBid: keccak256(abi.encodePacked(value, trueBid, secret)),
             deposit: msg.value
         });
+        bidders.push(msg.sender);
     }
 
     function reveal(
@@ -184,7 +206,7 @@ contract BlindAuction {
         uint256 trueBid,
         // this needs to be changed to bytes32 instead of string memory
         string memory secret
-    ) external verifiedAuction onlyAfter(biddingEnd) onlyBefore(revealEnd) {
+    ) external verifiedAuction onlyAfter(endTime) onlyBefore(revealTime) {
         uint256 refund;
         Bid storage bidToCheck = bids[msg.sender];
         if (
@@ -199,9 +221,19 @@ contract BlindAuction {
         }
         pendingReturns[msg.sender] += refund;
         bidToCheck.blindedBid = bytes32(0);
+
+        uint length = bidders.length;
+        for (uint i = 0; i < length; i++) {
+            if (bidders[i] == msg.sender) {
+                bidders[i] = bidders[bidders.length - 1];
+                delete bidders[length - 1];
+                bidders.pop();
+                break;
+            }
+        }
     }
 
-    function withdraw() external verifiedAuction {
+    function withdraw() external verifiedAuction onlyAfter(revealTime) {
         uint256 amount = pendingReturns[msg.sender];
         if (amount > 0) {
             pendingReturns[msg.sender] = 0;
@@ -209,11 +241,20 @@ contract BlindAuction {
         }
     }
 
-    function auctionEnd() external verifiedAuction onlyAfter(revealEnd) {
-        if (auctionState == AuctionState.CLOSED) revert AuctionAlreadyClosed();
-        emit AuctionEnded(highestBidder, highestBid);
-        auctionState = AuctionState.CLOSED;
-        seller.transfer(highestBid);
+    function auctionEnd() external verifiedAuction onlyAfter(revealTime) {
+        if (
+            auctionState == AuctionState.SUCCESSFUL ||
+            auctionState == AuctionState.FAILED
+        ) revert AuctionAlreadyClosed();
+        refundBids();
+        if (highestBidder != address((0))) {
+            auctionState = AuctionState.SUCCESSFUL;
+            emit AuctionSuccessful(highestBidder, highestBid);
+            seller.transfer(highestBid);
+        } else {
+            auctionState = AuctionState.FAILED;
+            emit AuctionFailed();
+        }
     }
 
     function placeBid(
@@ -221,7 +262,7 @@ contract BlindAuction {
         uint256 value
     ) internal returns (bool success) {
         // need to resolve for same bid conflict later
-        if (value <= highestBid) {
+        if (value < mimimumBid || value <= highestBid) {
             return false;
         }
         if (highestBidder != address(0)) {
@@ -230,5 +271,14 @@ contract BlindAuction {
         highestBid = value;
         highestBidder = bidder;
         return true;
+    }
+
+    function refundBids() internal {
+        for (uint i = 0; i < bidders.length; i++) {
+            address bidder = bidders[i];
+            pendingReturns[bidder] += bids[bidder].deposit;
+            bids[bidder].blindedBid = bytes32(0);
+        }
+        delete bidders;
     }
 }

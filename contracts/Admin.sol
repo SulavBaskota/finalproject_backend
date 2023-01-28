@@ -8,9 +8,9 @@ error NotSuperAdmin();
  */
 
 contract Admin {
-    address private immutable superAdminAddress;
-    mapping(address => bool) private adminAddressMap;
-    address[] private adminAddressArray;
+    address public immutable superAdminAddress;
+    mapping(address => bool) public adminAddressMap;
+    address[] public adminAddressArray;
 
     modifier onlySuperAdmin() {
         if (msg.sender != superAdminAddress) revert NotSuperAdmin();
@@ -20,7 +20,7 @@ contract Admin {
     constructor() {
         superAdminAddress = msg.sender;
         adminAddressMap[msg.sender] = true;
-        adminAddressArray.push(superAdminAddress);
+        adminAddressArray.push(msg.sender);
     }
 
     function registerAdmin(address adminAddress) external onlySuperAdmin {
@@ -29,13 +29,15 @@ contract Admin {
     }
 
     function unregisterAdmin(address adminAddress) external onlySuperAdmin {
-        adminAddressMap[adminAddress] = false;
+        delete adminAddressMap[adminAddress];
         uint length = adminAddressArray.length;
         for (uint i = 0; i < length; i++) {
             if (adminAddressArray[i] == adminAddress) {
-                adminAddressArray[i] = adminAddressArray[length - 1];
+                adminAddressArray[i] = adminAddressArray[
+                    adminAddressArray.length - 1
+                ];
                 delete adminAddressArray[length - 1];
-                length--;
+                adminAddressArray.pop();
                 break;
             }
         }
@@ -57,4 +59,6 @@ contract Admin {
     {
         return adminAddressArray;
     }
+
+    fallback() external {}
 }
