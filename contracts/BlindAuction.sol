@@ -163,14 +163,19 @@ contract BlindAuction {
         adminContractAddress = _adminContractAddress;
     }
 
-    function verifyAuction() external onlyAdmin pendingVerification {
+    function verifyAuction()
+        external
+        onlyAdmin
+        pendingVerification
+        onlyBefore(startTime)
+    {
         auctionState = AuctionState.OPEN;
         emit AuctionVerified(msg.sender);
     }
 
     function rejectAuction(
         string memory _rejectMessage
-    ) external onlyAdmin pendingVerification {
+    ) external onlyAdmin pendingVerification onlyBefore(startTime) {
         auctionState = AuctionState.REJECTED;
         rejectMessage = _rejectMessage;
         emit AuctionRejected(_rejectMessage, msg.sender);

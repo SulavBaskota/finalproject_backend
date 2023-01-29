@@ -2,6 +2,9 @@
 pragma solidity 0.8.17;
 
 error NotSuperAdmin();
+error CannotDeleteSuperAdmin();
+error AdminAlreadyRegisterd();
+error AddressNotAdmin();
 
 /*
  * May need to store admin username/userId for identification
@@ -24,11 +27,15 @@ contract Admin {
     }
 
     function registerAdmin(address adminAddress) external onlySuperAdmin {
+        if (adminAddressMap[adminAddress] == true)
+            revert AdminAlreadyRegisterd();
         adminAddressMap[adminAddress] = true;
         adminAddressArray.push(adminAddress);
     }
 
     function unregisterAdmin(address adminAddress) external onlySuperAdmin {
+        if (adminAddress == superAdminAddress) revert CannotDeleteSuperAdmin();
+        if (adminAddressMap[adminAddress] == false) revert AddressNotAdmin();
         delete adminAddressMap[adminAddress];
         uint length = adminAddressArray.length;
         for (uint i = 0; i < length; i++) {

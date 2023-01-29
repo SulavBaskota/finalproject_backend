@@ -6,6 +6,7 @@ const {
   frontEndBlindAuctionAbiFile,
   frontEndBlindAuctionFactoryAbiFile,
   frontEndBlindAuctionFactoryAddressFile,
+  BackEndBlindAuctionAbiFile,
 } = require("../helper-hardhat-config");
 
 module.exports = async () => {
@@ -16,7 +17,6 @@ module.exports = async () => {
 async function updateAbi() {
   const admin = await ethers.getContract("Admin");
   const blindAuctionFactory = await ethers.getContract("BlindAuctionFactory");
-  const blindAuction = await ethers.getContract("BlindAuction");
 
   fs.writeFileSync(
     frontEndAdminAbiFile,
@@ -26,9 +26,14 @@ async function updateAbi() {
     frontEndBlindAuctionFactoryAbiFile,
     blindAuctionFactory.interface.format(ethers.utils.FormatTypes.json)
   );
+
+  const blindAuctionAbi = JSON.parse(
+    fs.readFileSync(BackEndBlindAuctionAbiFile, "utf8")
+  ).abi;
+
   fs.writeFileSync(
     frontEndBlindAuctionAbiFile,
-    blindAuction.interface.format(ethers.utils.FormatTypes.json)
+    JSON.stringify(blindAuctionAbi)
   );
 }
 
