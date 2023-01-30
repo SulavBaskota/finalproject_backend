@@ -1,32 +1,12 @@
 const { ethers } = require("hardhat");
 const fs = require("fs");
 const { BackEndBlindAuctionAbiFile } = require("../helper-hardhat-config");
+const { blindAuctions } = require("../constants/blindAuctions");
 
 module.exports = async ({ deployments }) => {
   const { log } = deployments;
   const accounts = await ethers.getSigners();
   const deployer = accounts[0];
-
-  const params = [
-    {
-      seller: 6,
-      startTime: 1675044900,
-      endTime: 1675048500,
-      minimumBid: ethers.utils.parseEther("1"),
-    },
-    {
-      seller: 7,
-      startTime: 1675048500,
-      endTime: 1675052100,
-      minimumBid: ethers.utils.parseEther("1"),
-    },
-    {
-      seller: 8,
-      startTime: 1675052100,
-      endTime: 1675055700,
-      minimumBid: ethers.utils.parseEther("1"),
-    },
-  ];
 
   const blindAuctionFactoryContract = await ethers.getContract(
     "BlindAuctionFactory",
@@ -35,8 +15,8 @@ module.exports = async ({ deployments }) => {
 
   let blindAuction, args, blindAuctionFactory, seller, txReceipt, txResponse;
 
-  for (let i = 0; i < params.length; i++) {
-    args = params[i];
+  for (let i = 0; i < blindAuctions.length; i++) {
+    args = blindAuctions[i];
     seller = accounts[args.seller];
     blindAuctionFactory = blindAuctionFactoryContract.connect(seller);
     await blindAuctionFactory.createBlindAuctionContract(
