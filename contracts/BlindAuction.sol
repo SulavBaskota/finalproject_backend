@@ -286,4 +286,21 @@ contract BlindAuction {
         }
         delete bidders;
     }
+
+    function getAuctionDetails()
+        external
+        view
+        returns (
+            address _contractAddress,
+            uint _startTime,
+            uint _endTime,
+            uint _minimumBid,
+            address _seller,
+            AuctionState _auctionState
+        )
+    {
+        return (address(this), startTime, endTime, mimimumBid, seller, auctionState);
+    }
+
+    fallback() external {}
 }

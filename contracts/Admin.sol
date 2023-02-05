@@ -5,6 +5,7 @@ error NotSuperAdmin();
 error CannotDeleteSuperAdmin();
 error AdminAlreadyRegisterd();
 error AddressNotAdmin();
+error InvalidAddress();
 
 /*
  * May need to store admin username/userId for identification
@@ -27,6 +28,7 @@ contract Admin {
     }
 
     function registerAdmin(address adminAddress) external onlySuperAdmin {
+        if (adminAddress == address(0)) revert InvalidAddress();
         if (adminAddressMap[adminAddress] == true)
             revert AdminAlreadyRegisterd();
         adminAddressMap[adminAddress] = true;
@@ -34,6 +36,7 @@ contract Admin {
     }
 
     function unregisterAdmin(address adminAddress) external onlySuperAdmin {
+        if (adminAddress == address(0)) revert InvalidAddress();
         if (adminAddress == superAdminAddress) revert CannotDeleteSuperAdmin();
         if (adminAddressMap[adminAddress] == false) revert AddressNotAdmin();
         delete adminAddressMap[adminAddress];

@@ -1,4 +1,4 @@
-const currentTime = Math.floor(Date.now() / 1000);
+const currentTime = Math.floor(Date.now());
 
 const currentTimePlusHours = (hours) => {
   return parseInt(currentTime + hours * 60 * 60);
