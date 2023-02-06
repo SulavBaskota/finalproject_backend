@@ -7,20 +7,20 @@ const currentTimePlusHours = (hours) => {
 const blindAuctions = [
   {
     seller: 6,
-    startTime: currentTimePlusHours(1),
-    endTime: currentTimePlusHours(2),
+    startTime: currentTimePlusHours(0.1),
+    endTime: currentTimePlusHours(0.2),
     minimumBid: ethers.utils.parseEther("1"),
   },
   {
     seller: 7,
-    startTime: currentTimePlusHours(2),
-    endTime: currentTimePlusHours(3),
+    startTime: currentTimePlusHours(0.2),
+    endTime: currentTimePlusHours(0.3),
     minimumBid: ethers.utils.parseEther("1"),
   },
   {
     seller: 8,
-    startTime: currentTimePlusHours(3),
-    endTime: currentTimePlusHours(4),
+    startTime: currentTimePlusHours(0.3),
+    endTime: currentTimePlusHours(0.4),
     minimumBid: ethers.utils.parseEther("1"),
   },
 ];

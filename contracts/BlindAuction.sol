@@ -10,8 +10,8 @@ error InvalidReveal();
 error SellerCannotBid();
 error OnlyOneBidAllowed();
 error AuctionNotVerified();
-error TooLate(uint256 time);
-error TooEarly(uint256 time);
+error TooLate(uint time);
+error TooEarly(uint time);
 error InvalidAuctionPeriod();
 error AuctionAlreadyClosed();
 error AuctionAlreadyVerified();
@@ -52,7 +52,7 @@ contract BlindAuction {
     /**Type Declarations */
     struct Bid {
         bytes32 blindedBid;
-        uint256 deposit;
+        uint deposit;
     }
 
     enum AuctionState {
@@ -65,32 +65,32 @@ contract BlindAuction {
 
     /**State Variables */
     string private rejectMessage;
-    uint256 private immutable endTime;
-    uint256 private immutable startTime;
-    uint256 private immutable mimimumBid;
-    uint256 private immutable revealTime;
+    uint private immutable endTime;
+    uint private immutable startTime;
+    uint private immutable mimimumBid;
+    uint private immutable revealTime;
     address payable private immutable seller;
     address private immutable adminContractAddress;
     address[] private bidders;
 
-    uint256 private constant REVEAL_PERIOD = 240; // 4 minutes
-    uint256 private constant MINIMUM_VERIFICATION_DURATION = 120; // 2 minutes
-    uint256 private constant MINIMUM_AUCTION_DURATION = 240; // 4 minutes
+    uint private constant REVEAL_PERIOD = 240; // 4 minutes
+    uint private constant MINIMUM_VERIFICATION_DURATION = 120; // 2 minutes
+    uint private constant MINIMUM_AUCTION_DURATION = 240; // 4 minutes
 
     AuctionState private auctionState;
 
     mapping(address => Bid) private bids;
 
     address public highestBidder;
-    uint256 public highestBid;
+    uint public highestBid;
 
-    mapping(address => uint256) private pendingReturns;
+    mapping(address => uint) private pendingReturns;
 
     /**Events */
     event AuctionFailed();
     event AuctionVerified(address verifiedBy);
     event AuctionRejected(string reason, address rejectedBy);
-    event AuctionSuccessful(address winner, uint256 highestBid);
+    event AuctionSuccessful(address winner, uint highestBid);
 
     /**Modifiers */
     modifier onlyAdmin() {
@@ -108,12 +108,12 @@ contract BlindAuction {
         _;
     }
 
-    modifier onlyBefore(uint256 time) {
+    modifier onlyBefore(uint time) {
         if (block.timestamp >= time) revert TooLate(time);
         _;
     }
 
-    modifier onlyAfter(uint256 time) {
+    modifier onlyAfter(uint time) {
         if (block.timestamp <= time) revert TooEarly(time);
         _;
     }
@@ -144,9 +144,9 @@ contract BlindAuction {
 
     /**Constructor */
     constructor(
-        uint256 _startTime,
-        uint256 _endTime,
-        uint256 _minimumBid,
+        uint _startTime,
+        uint _endTime,
+        uint _minimumBid,
         address _adminContractAddress,
         address payable sellerAddress
     ) {
@@ -175,19 +175,14 @@ contract BlindAuction {
 
     function rejectAuction(
         string memory _rejectMessage
-    ) external onlyAdmin pendingVerification onlyBefore(startTime) {
+    ) external onlyAdmin pendingVerification {
         auctionState = AuctionState.REJECTED;
         rejectMessage = _rejectMessage;
         emit AuctionRejected(_rejectMessage, msg.sender);
     }
 
-    /*
-     * During Implementation, the parameters need to be changed
-     */
     function bid(
-        uint256 value,
-        uint256 trueBid,
-        string memory secret
+        bytes32 _blindedBid
     )
         external
         payable
@@ -198,25 +193,19 @@ contract BlindAuction {
         noPreviousBid
     {
         if (msg.value < mimimumBid) revert InvalidBid();
-        bids[msg.sender] = Bid({
-            // This needs to be done outside the contract during implementation
-            blindedBid: keccak256(abi.encodePacked(value, trueBid, secret)),
-            deposit: msg.value
-        });
+        bids[msg.sender] = Bid({blindedBid: _blindedBid, deposit: msg.value});
         bidders.push(msg.sender);
     }
 
     function reveal(
-        uint256 value,
-        uint256 trueBid,
-        // this needs to be changed to bytes32 instead of string memory
-        string memory secret
+        uint trueBid,
+        bytes32 secret
     ) external verifiedAuction onlyAfter(endTime) onlyBefore(revealTime) {
-        uint256 refund;
+        uint refund;
         Bid storage bidToCheck = bids[msg.sender];
         if (
             bidToCheck.blindedBid !=
-            keccak256(abi.encodePacked(value, trueBid, secret))
+            keccak256(abi.encodePacked(trueBid, secret))
         ) {
             revert InvalidReveal();
         }
@@ -239,7 +228,7 @@ contract BlindAuction {
     }
 
     function withdraw() external verifiedAuction onlyAfter(revealTime) {
-        uint256 amount = pendingReturns[msg.sender];
+        uint amount = pendingReturns[msg.sender];
         if (amount > 0) {
             pendingReturns[msg.sender] = 0;
             payable(msg.sender).transfer(amount);
@@ -264,7 +253,7 @@ contract BlindAuction {
 
     function placeBid(
         address bidder,
-        uint256 value
+        uint value
     ) internal returns (bool success) {
         // need to resolve for same bid conflict later
         if (value < mimimumBid || value <= highestBid) {
@@ -299,7 +288,14 @@ contract BlindAuction {
             AuctionState _auctionState
         )
     {
-        return (address(this), startTime, endTime, mimimumBid, seller, auctionState);
+        return (
+            address(this),
+            startTime,
+            endTime,
+            mimimumBid,
+            seller,
+            auctionState
+        );
     }
 
     fallback() external {}

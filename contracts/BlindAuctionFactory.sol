@@ -31,9 +31,9 @@ contract BlindAuctionFactory {
     }
 
     function createBlindAuctionContract(
-        uint256 startTime,
-        uint256 endTime,
-        uint256 minimumBid
+        uint startTime,
+        uint endTime,
+        uint minimumBid
     ) external {
         BlindAuction blindAuction = new BlindAuction(
             startTime,
