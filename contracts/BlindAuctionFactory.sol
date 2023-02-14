@@ -33,12 +33,14 @@ contract BlindAuctionFactory {
     function createBlindAuctionContract(
         uint startTime,
         uint endTime,
-        uint minimumBid
+        uint minimumBid,
+        string memory cid
     ) external {
         BlindAuction blindAuction = new BlindAuction(
             startTime,
             endTime,
             minimumBid,
+            cid,
             adminContractAddress,
             payable(msg.sender)
         );

@@ -13,7 +13,7 @@ module.exports = async ({ deployments }) => {
     deployer
   );
 
-  let blindAuction, args, blindAuctionFactory, seller, txReceipt, txResponse;
+  let blindAuction, args, blindAuctionFactory, seller;
 
   for (let i = 0; i < blindAuctions.length; i++) {
     args = blindAuctions[i];
@@ -22,7 +22,8 @@ module.exports = async ({ deployments }) => {
     await blindAuctionFactory.createBlindAuctionContract(
       args.startTime,
       args.endTime,
-      args.minimumBid
+      args.minimumBid,
+      args.cid
     );
   }
 

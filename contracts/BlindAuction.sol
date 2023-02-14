@@ -35,12 +35,6 @@ error AuctionAlreadyRejected();
  * before biddingEnd
  *
  *
- * Might need to return deposits to all bidders that did not reveal their bids
- * This should be done in the auctinEnd function
- * by using a loop to add the unrevealed bids to the pendingReturns mapping
- *
- *
- *
  * Need to handle unsuccessful auction, which should allow bidders to withdraw their deposits
  *
  *
@@ -69,6 +63,7 @@ contract BlindAuction {
     uint private immutable startTime;
     uint private immutable mimimumBid;
     uint private immutable revealTime;
+    string private cid;
     address payable private immutable seller;
     address private immutable adminContractAddress;
     address[] private bidders;
@@ -147,6 +142,7 @@ contract BlindAuction {
         uint _startTime,
         uint _endTime,
         uint _minimumBid,
+        string memory _cid,
         address _adminContractAddress,
         address payable sellerAddress
     ) {
@@ -160,6 +156,7 @@ contract BlindAuction {
         revealTime = _endTime + REVEAL_PERIOD;
         auctionState = AuctionState.UNVERIFIED;
         mimimumBid = _minimumBid;
+        cid = _cid;
         adminContractAddress = _adminContractAddress;
     }
 
@@ -284,6 +281,7 @@ contract BlindAuction {
             uint _startTime,
             uint _endTime,
             uint _minimumBid,
+            string memory _cid,
             address _seller,
             AuctionState _auctionState
         )
@@ -293,6 +291,7 @@ contract BlindAuction {
             startTime,
             endTime,
             mimimumBid,
+            cid,
             seller,
             auctionState
         );
