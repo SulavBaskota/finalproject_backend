@@ -17,31 +17,6 @@ error AuctionAlreadyClosed();
 error AuctionAlreadyVerified();
 error AuctionAlreadyRejected();
 
-/*
- * Might need to store username/userId for bidders and sellers for identification
- * This value can be encrypted using a SECRET_KEY
- * Should only be accessible to admin
- * A getter function with onlyAdmin modifier can be used for this
- *
- *
- * Another solution is for the user to verify that they are the winner
- * This can be done by using a function that compares the address of highestBidder to
- * the address of the user requesting verification only after revealEnd
- * the location provided by the user during this is sent to the admin dashboard along with the
- * auction and auction item addresses/Ids
- *
- *
- * Might have to create a method that allows a bidder to cancel their bid and return their deposit
- * before biddingEnd
- *
- *
- * Need to handle unsuccessful auction, which should allow bidders to withdraw their deposits
- *
- *
- * How to manage search? How to keep track of auctions for both sellers and buyer? Maybe create a watch-list,
- * have a section to show successful winning bids for bidder, and my-auctions for sellers
- */
-
 contract BlindAuction {
     /**Type Declarations */
     struct Bid {
@@ -252,7 +227,6 @@ contract BlindAuction {
         address bidder,
         uint value
     ) internal returns (bool success) {
-        // need to resolve for same bid conflict later
         if (value < mimimumBid || value <= highestBid) {
             return false;
         }

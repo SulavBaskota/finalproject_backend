@@ -7,10 +7,6 @@ error AdminAlreadyRegisterd();
 error AddressNotAdmin();
 error InvalidAddress();
 
-/*
- * May need to store admin username/userId for identification
- */
-
 contract Admin {
     address public immutable superAdminAddress;
     mapping(address => bool) public adminAddressMap;
