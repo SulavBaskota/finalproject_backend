@@ -213,7 +213,7 @@ contract BlindAuction {
             auctionState == AuctionState.FAILED
         ) revert AuctionAlreadyClosed();
         refundBids();
-        if (highestBidder != address((0))) {
+        if (highestBidder != address(0)) {
             auctionState = AuctionState.SUCCESSFUL;
             emit AuctionSuccessful(highestBidder, highestBid);
             seller.transfer(highestBid);
